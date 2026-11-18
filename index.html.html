@@ -1,0 +1,1612 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <!-- iPhone Safari Tam Ekran ve Çentik (Safe Area) Uyumlu Viewport -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  
+  <!-- iOS Ana Ekrana Ekle (PWA) Meta Etiketleri -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Harcama & Birikim">
+  <meta name="theme-color" content="#0f172a">
+  
+  <!-- Dinamik SVG Uygulama İkonu ve PWA Manifest (iOS Ana Ekran Kısayolu İçin) -->
+  <link id="appleTouchIcon" rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%230f172a'/%3E%3Ccircle cx='256' cy='256' r='160' fill='%2310b981' fill-opacity='0.15'/%3E%3Ctext x='256' y='315' font-family='-apple-system, BlinkMacSystemFont, sans-serif' font-size='220' font-weight='bold' fill='%2310b981' text-anchor='middle'%3E₺%3C/text%3E%3C/svg%3E">
+  <link id="webManifestLink" rel="manifest" href="">
+
+  <title>Harcama & Birikim - Kişisel Bütçe Takip</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    /* iOS Safari Dokunmatik ve Safe Area Optimizasyonları */
+    :root {
+      --sat: env(safe-area-inset-top, 20px);
+      --sab: env(safe-area-inset-bottom, 20px);
+    }
+
+    * {
+      -webkit-tap-highlight-color: transparent;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+      margin: 0;
+      padding: 0;
+      overscroll-behavior-y: none;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Üst Çentik (Dynamic Island / Notch) Boşluğu */
+    .header-safe {
+      padding-top: calc(var(--sat) + 12px);
+    }
+
+    /* Alt Navigasyon ve Home Bar Boşluğu */
+    .bottom-nav-safe {
+      padding-bottom: calc(var(--sab) + 8px);
+    }
+
+    .main-content-safe {
+      padding-bottom: calc(var(--sab) + 96px);
+    }
+
+    /* Özel Kaydırma Çubuğu Gizleme */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    /* Geçiş Animasyonları */
+    .tab-view {
+      display: none;
+      animation: fadeIn 0.2s ease-out;
+    }
+    .tab-view.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Input odaklanmasında iOS otomatik zoom engelleme (en az 16px font) */
+    input, select {
+      font-size: 16px !important;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 select-none">
+
+  <!-- Üst Başlık Alanı -->
+  <header class="bg-slate-900 text-white header-safe px-5 pb-5 rounded-b-3xl shadow-lg sticky top-0 z-30">
+    <div class="max-w-lg mx-auto">
+      <div class="flex items-center justify-between mb-1">
+        <div class="flex items-center gap-2">
+          <span class="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-lg">₺</span>
+          <h1 class="text-lg font-bold tracking-tight">Harcama Takip</h1>
+        </div>
+        <!-- Safari Ana Ekrana Ekleme Yardım Butonu -->
+        <button onclick="openInstallModal()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-full flex items-center gap-1.5 transition active:scale-95">
+          <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+          <span>Ana Ekrana Ekle</span>
+        </button>
+      </div>
+      <p id="headerSubtitle" class="text-xs text-slate-400 font-medium mt-1">18 Kasım 2026, Çarşamba</p>
+    </div>
+  </header>
+
+  <!-- Ana İçerik Alanı -->
+  <main class="max-w-lg mx-auto px-4 pt-4 main-content-safe">
+
+    <!-- ========================================== -->
+    <!-- SEKME 1: BUGÜN & HARCAMA EKLE              -->
+    <!-- ========================================== -->
+    <section id="view-today" class="tab-view active space-y-4">
+      
+      <!-- Tarih Seçici ve Günlük Toplam Kartı -->
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-3">
+          <div>
+            <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 block">Seçili Tarih</span>
+            <span id="selectedDateDisplay" class="text-sm font-bold text-slate-800">18 Kasım 2026, Çarşamba</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <button onclick="changeSelectedDate(-1)" class="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600 active:bg-slate-200" aria-label="Önceki Gün">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path></svg>
+            </button>
+            <input type="date" id="datePickerInput" onchange="onDateInputChange(this.value)" class="w-9 h-9 opacity-0 absolute pointer-events-none">
+            <button onclick="triggerDatePicker()" class="px-2.5 h-9 rounded-xl bg-slate-100 text-xs font-semibold text-slate-700 active:bg-slate-200">
+              Tarih
+            </button>
+            <button onclick="changeSelectedDate(1)" class="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600 active:bg-slate-200" aria-label="Sonraki Gün">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- O Günün Toplam Harcaması -->
+        <div class="flex items-baseline justify-between">
+          <div>
+            <p class="text-xs font-medium text-slate-500">Seçili Gün Toplamı</p>
+            <p id="todayTotalAmount" class="text-3xl font-extrabold text-slate-900 tracking-tight mt-0.5">0,00 ₺</p>
+          </div>
+          <button id="goToTodayBtn" onclick="resetToToday()" class="hidden text-xs font-semibold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl">
+            Bugüne Dön
+          </button>
+        </div>
+
+        <!-- O Ayki Toplam ve Günlük Ortalama Özet Kutuları -->
+        <div class="grid grid-cols-2 gap-2.5 mt-4 pt-3 border-t border-slate-100">
+          <div class="bg-slate-50 rounded-xl p-3">
+            <span class="text-[11px] font-medium text-slate-500 block">Bu Ay Toplam</span>
+            <span id="monthTotalQuick" class="text-base font-bold text-slate-800 mt-0.5 block">0,00 ₺</span>
+          </div>
+          <div class="bg-slate-50 rounded-xl p-3">
+            <span class="text-[11px] font-medium text-slate-500 block">Günlük Ortalama</span>
+            <span id="monthDailyAvgQuick" class="text-base font-bold text-emerald-600 mt-0.5 block">0,00 ₺</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hızlı Harcama Ekleme Formu -->
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+        <h2 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+          Yeni Harcama Ekle
+        </h2>
+
+        <form id="expenseForm" onsubmit="handleAddExpense(event)" class="space-y-3.5">
+          <!-- Tutar Girişi -->
+          <div>
+            <label for="amountInput" class="block text-xs font-medium text-slate-500 mb-1">Tutar (₺)</label>
+            <div class="relative">
+              <input 
+                type="text" 
+                inputmode="decimal" 
+                id="amountInput" 
+                placeholder="0,00" 
+                required
+                class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xl font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition"
+              >
+              <span class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-lg">₺</span>
+            </div>
+          </div>
+
+          <!-- 8 Sektör Seçimi (Grid Butonlar) -->
+          <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1.5">Sektör Seçin</label>
+            <div id="categorySelectorGrid" class="grid grid-cols-4 gap-2">
+              <!-- JS ile 8 kategori buraya render edilecek -->
+            </div>
+          </div>
+
+          <!-- İsteğe Bağlı Kısa Not -->
+          <div>
+            <input 
+              type="text" 
+              id="noteInput" 
+              placeholder="Açıklama (İsteğe bağlı, örn: Öğle yemeği)" 
+              maxlength="60"
+              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition"
+            >
+          </div>
+
+          <!-- Kaydet Butonu -->
+          <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 active:scale-[0.99] text-white font-semibold py-3.5 rounded-xl shadow-sm transition flex items-center justify-center gap-2">
+            <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
+            <span>Harcama Ekle</span>
+          </button>
+        </form>
+      </div>
+
+      <!-- Tekrarlayan Küçük Harcamaların Yıllık Maliyeti Kartı -->
+      <div id="annualProjectionCard" class="hidden bg-gradient-to-br from-amber-50 to-orange-50/70 rounded-2xl p-4 shadow-sm border border-amber-200/80">
+        <div class="flex items-start justify-between gap-2 mb-2.5">
+          <div class="flex items-center gap-2">
+            <span class="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-700 flex items-center justify-center text-base shrink-0">⏳</span>
+            <div>
+              <h3 class="text-xs font-extrabold uppercase tracking-wider text-amber-900">Yıllık Maliyet Farkındalığı</h3>
+              <p class="text-[11px] text-amber-700/90">Tekrarlayan harcamalarının 1 yıllık projeksiyonu</p>
+            </div>
+          </div>
+        </div>
+        <div id="annualProjectionList" class="space-y-2">
+          <!-- Dinamik yıllık projeksiyon maddeleri buraya gelecek -->
+        </div>
+      </div>
+
+      <!-- Seçili Günün Harcama Listesi -->
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-sm font-bold text-slate-800">Günün Harcamaları</h3>
+          <span id="todayCountBadge" class="text-xs font-semibold bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded-full">0 işlem</span>
+        </div>
+        
+        <div id="todayExpenseList" class="space-y-2.5">
+          <!-- Harcamalar buraya listelenecek -->
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ========================================== -->
+    <!-- SEKME 2: AYLIK & DİĞER GÜNLER              -->
+    <!-- ========================================== -->
+    <section id="view-history" class="tab-view space-y-4">
+      
+      <!-- Ay Seçici Kartı -->
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+        <div class="flex items-center justify-between mb-4">
+          <button onclick="changeHistoryMonth(-1)" class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700 active:bg-slate-200">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path></svg>
+          </button>
+          <div class="text-center">
+            <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 block">Dönem Özeti</span>
+            <h2 id="historyMonthTitle" class="text-base font-extrabold text-slate-900">Kasım 2026</h2>
+          </div>
+          <button onclick="changeHistoryMonth(1)" class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700 active:bg-slate-200">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
+          </button>
+        </div>
+
+        <!-- Aylık Toplam ve Günlük Ortalama Büyük Kartlar -->
+        <div class="grid grid-cols-2 gap-3">
+          <div class="bg-slate-900 text-white rounded-2xl p-3.5">
+            <span class="text-xs text-slate-400 block">Aylık Toplam</span>
+            <span id="historyMonthTotal" class="text-xl font-extrabold mt-1 block">0,00 ₺</span>
+          </div>
+          <div class="bg-emerald-50 border border-emerald-100 rounded-2xl p-3.5">
+            <span class="text-xs text-emerald-700 font-medium block">Günlük Ortalama</span>
+            <span id="historyDailyAverage" class="text-xl font-extrabold text-emerald-700 mt-1 block">0,00 ₺</span>
+            <span id="historyAvgSubtext" class="text-[10px] text-emerald-600/80 block mt-0.5">Geçen 18 gün baz alındı</span>
+          </div>
+        </div>
+
+        <!-- O Ayın Sektör Dağılımı Özeti -->
+        <div class="mt-4 pt-3 border-t border-slate-100">
+          <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2.5">Sektör Bazlı Aylık Harcama</h3>
+          <div id="historyCategoryBreakdown" class="space-y-2">
+            <!-- Kategori özetleri buraya gelecek -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Ayın Diğer Günlerindeki Harcamalar -->
+      <div class="space-y-2.5">
+        <div class="flex items-center justify-between px-1">
+          <h3 class="text-sm font-bold text-slate-800">Günlere Göre Harcamalar</h3>
+          <span id="activeDaysCount" class="text-xs text-slate-500 font-medium">0 aktif gün</span>
+        </div>
+        
+        <div id="historyDaysContainer" class="space-y-2.5">
+          <!-- Günlük harcama kartları buraya render edilecek -->
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ========================================== -->
+    <!-- SEKME 3: SEKTÖR BÜTÇELERİ & YEDEKLEME      -->
+    <!-- ========================================== -->
+    <section id="view-budget" class="tab-view space-y-4">
+      
+      <!-- Genel Bütçe Durum Kartı -->
+      <div class="bg-slate-900 text-white rounded-2xl p-4 shadow-sm">
+        <div class="flex items-center justify-between mb-2">
+          <div>
+            <span class="text-xs text-slate-400 block" id="budgetMonthLabel">Kasım 2026 Bütçe Durumu</span>
+            <h2 class="text-lg font-bold mt-0.5">Aylık Hedef & Kalan</h2>
+          </div>
+          <span id="totalBudgetPercentBadge" class="text-xs font-bold bg-emerald-500/20 text-emerald-400 px-2.5 py-1 rounded-full">%0 Kullanıldı</span>
+        </div>
+
+        <div class="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-slate-800 text-center">
+          <div>
+            <span class="text-[11px] text-slate-400 block">Toplam Bütçe</span>
+            <span id="summaryTotalBudget" class="text-sm font-bold text-white mt-0.5 block">0 ₺</span>
+          </div>
+          <div>
+            <span class="text-[11px] text-slate-400 block">Harcanan</span>
+            <span id="summaryTotalSpent" class="text-sm font-bold text-amber-400 mt-0.5 block">0 ₺</span>
+          </div>
+          <div>
+            <span class="text-[11px] text-slate-400 block">Toplam Kalan</span>
+            <span id="summaryTotalRemaining" class="text-sm font-bold text-emerald-400 mt-0.5 block">0 ₺</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sektör Bazlı Bütçe Ayarları ve Kalan Tutarlar -->
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <h3 class="text-sm font-bold text-slate-800">Sektör Bütçeleri</h3>
+            <p class="text-xs text-slate-500">Bütçe belirlemek için tutara dokunun</p>
+          </div>
+        </div>
+
+        <div id="budgetListContainer" class="space-y-3.5">
+          <!-- 8 Sektör Bütçe Kartı Buraya Gelecek -->
+        </div>
+      </div>
+
+      <!-- Veri Yedekleme & Geri Yükleme (iOS Safari Veri Koruma) -->
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 space-y-3">
+        <div>
+          <h3 class="text-sm font-bold text-slate-800">Veri Yedekleme & Aktarım</h3>
+          <p class="text-xs text-slate-500 mt-0.5">Verileriniz telefonunuzda saklanır. İsterseniz yedek alabilir veya geri yükleyebilirsiniz.</p>
+        </div>
+        <div class="grid grid-cols-2 gap-2.5">
+          <button onclick="exportBackupData()" class="py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold flex items-center justify-center gap-1.5 transition">
+            <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            <span>Yedeği İndir / Kopyala</span>
+          </button>
+          <label class="py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer">
+            <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+            <span>Yedekten Yükle</span>
+            <input type="file" accept=".json" onchange="importBackupData(event)" class="hidden">
+          </label>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ========================================== -->
+    <!-- SEKME 4: HEDEF KUMBARASI & BİRİKİM         -->
+    <!-- ========================================== -->
+    <section id="view-savings" class="tab-view space-y-4">
+      
+      <!-- Hedef Kumbarası Ana Kartı -->
+      <div class="bg-slate-900 text-white rounded-3xl p-5 shadow-md relative overflow-hidden">
+        <div class="flex items-start justify-between gap-3 mb-4">
+          <div>
+            <span class="text-[11px] font-semibold uppercase tracking-wider text-emerald-400 block">Birikim Hedefim</span>
+            <h2 id="savingsGoalTitleDisplay" class="text-xl font-extrabold text-white mt-0.5">Acil Durum Fonu</h2>
+          </div>
+          <button onclick="openGoalModal()" class="text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-xl border border-slate-700 flex items-center gap-1.5 active:scale-95 transition">
+            <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+            <span>Hedefi Düzenle</span>
+          </button>
+        </div>
+
+        <!-- İlerleme Yüzdesi ve Tutarlar -->
+        <div class="flex items-baseline justify-between mb-2">
+          <div>
+            <span class="text-xs text-slate-400 block">Kumbarada Biriken</span>
+            <span id="savingsCurrentTotal" class="text-3xl font-extrabold text-emerald-400 tracking-tight">0,00 ₺</span>
+          </div>
+          <div class="text-right">
+            <span id="savingsPercentBadge" class="text-sm font-extrabold text-white bg-emerald-500/20 border border-emerald-500/30 px-2.5 py-0.5 rounded-full">%0</span>
+          </div>
+        </div>
+
+        <!-- Büyük Görsel İlerleme Çubuğu -->
+        <div class="w-full h-3.5 bg-slate-800 rounded-full overflow-hidden p-0.5 my-3 border border-slate-700/80">
+          <div id="savingsProgressBar" class="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-500" style="width: 0%"></div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800/80 text-xs">
+          <div>
+            <span class="text-slate-400 block">Hedef Tutar</span>
+            <span id="savingsTargetDisplay" class="font-bold text-slate-200 text-sm mt-0.5 block">10.000,00 ₺</span>
+          </div>
+          <div class="text-right">
+            <span class="text-slate-400 block">Hedefe Kalan</span>
+            <span id="savingsRemainingDisplay" class="font-bold text-amber-400 text-sm mt-0.5 block">10.000,00 ₺</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Kumbaraya Para At Modülü -->
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 space-y-3.5">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+            <span class="text-base">🐷</span>
+            <span>Kumbaraya Para At</span>
+          </h3>
+          <span class="text-[11px] font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Harcamadığını biriktir</span>
+        </div>
+
+        <!-- Hızlı Kısayol Butonları -->
+        <div>
+          <span class="block text-[11px] font-medium text-slate-400 mb-1.5">Hızlı Ekleme Kısayolları</span>
+          <div class="grid grid-cols-4 gap-2">
+            <button type="button" onclick="quickAddSavings(50, 'Hızlı birikim (+50 ₺)')" class="py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 active:scale-95 text-emerald-700 font-bold text-xs border border-emerald-200/70 transition">+50 ₺</button>
+            <button type="button" onclick="quickAddSavings(100, 'Hızlı birikim (+100 ₺)')" class="py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 active:scale-95 text-emerald-700 font-bold text-xs border border-emerald-200/70 transition">+100 ₺</button>
+            <button type="button" onclick="quickAddSavings(250, 'Hızlı birikim (+250 ₺)')" class="py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 active:scale-95 text-emerald-700 font-bold text-xs border border-emerald-200/70 transition">+250 ₺</button>
+            <button type="button" id="transferDailyRemainingBtn" onclick="transferDailyRemainingToSavings()" class="py-2 px-1 rounded-xl bg-slate-900 hover:bg-slate-800 active:scale-95 text-emerald-400 font-bold text-[10px] leading-tight transition flex flex-col items-center justify-center">
+              <span>Kalan Bütçe</span>
+              <span id="dailyRemainingQuickLabel" class="text-white text-[11px] mt-0.5">0 ₺</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Özel Tutar ve Tasarruf Notu Formu -->
+        <form onsubmit="handleAddSavings(event)" class="space-y-3 pt-2 border-t border-slate-100">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div class="relative">
+              <input 
+                type="text" 
+                inputmode="decimal" 
+                id="savingsAmountInput" 
+                placeholder="Özel tutar (₺)" 
+                required
+                class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-base font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition"
+              >
+              <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">₺</span>
+            </div>
+            <div>
+              <input 
+                type="text" 
+                id="savingsNoteInput" 
+                placeholder="Not (örn: Kahve almadım, vazgeçtim)" 
+                maxlength="60"
+                class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition"
+              >
+            </div>
+          </div>
+
+          <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-semibold py-3 rounded-xl shadow-sm transition flex items-center justify-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+            <span>Kumbaraya Aktar</span>
+          </button>
+        </form>
+      </div>
+
+      <!-- Birikim Geçmişi Listesi -->
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-sm font-bold text-slate-800">Birikim Geçmişi</h3>
+          <span id="savingsCountBadge" class="text-xs font-semibold bg-emerald-50 text-emerald-700 px-2.5 py-0.5 rounded-full">0 işlem</span>
+        </div>
+
+        <div id="savingsHistoryList" class="space-y-2.5">
+          <!-- Kumbara kayıtları buraya listelenecek -->
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Alt Tab Navigasyon Çubuğu (4 Sekmeli Başparmak Dostu iOS Tasarımı) -->
+  <nav class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 bottom-nav-safe z-40">
+    <div class="max-w-lg mx-auto grid grid-cols-4 h-14">
+      <button onclick="switchTab('today')" id="nav-today" class="nav-btn flex flex-col items-center justify-center gap-0.5 text-slate-900 font-bold">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+        <span class="text-[11px]">Bugün</span>
+      </button>
+      
+      <button onclick="switchTab('history')" id="nav-history" class="nav-btn flex flex-col items-center justify-center gap-0.5 text-slate-400 font-medium">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+        <span class="text-[11px]">Günler</span>
+      </button>
+
+      <button onclick="switchTab('budget')" id="nav-budget" class="nav-btn flex flex-col items-center justify-center gap-0.5 text-slate-400 font-medium">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+        <span class="text-[11px]">Bütçe</span>
+      </button>
+
+      <button onclick="switchTab('savings')" id="nav-savings" class="nav-btn flex flex-col items-center justify-center gap-0.5 text-slate-400 font-medium">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <span class="text-[11px]">Kumbara</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Bütçe Düzenleme Modalı -->
+  <div id="budgetModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden items-end sm:items-center justify-center p-4">
+    <div class="bg-white w-full max-w-md rounded-3xl p-5 shadow-2xl animate-[fadeIn_0.2s_ease-out]">
+      <div class="flex items-center justify-between mb-3">
+        <div class="flex items-center gap-2.5">
+          <span id="modalCatIcon" class="w-10 h-10 rounded-2xl flex items-center justify-center text-xl bg-slate-100">🍽️</span>
+          <div>
+            <h3 id="modalCatName" class="text-base font-bold text-slate-900">Yemek Bütçesi</h3>
+            <p class="text-xs text-slate-500">Aylık harcama limitini belirleyin</p>
+          </div>
+        </div>
+        <button onclick="closeBudgetModal()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center">✕</button>
+      </div>
+
+      <div class="my-4">
+        <label class="block text-xs font-semibold text-slate-500 mb-1.5">Aylık Bütçe Tutarı (₺)</label>
+        <div class="relative">
+          <input 
+            type="text" 
+            inputmode="decimal" 
+            id="modalBudgetInput" 
+            placeholder="0"
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-2xl font-extrabold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          >
+          <span class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-lg">₺</span>
+        </div>
+        <p class="text-[11px] text-slate-400 mt-1.5">Bütçe takibini kapatmak için 0 girebilirsiniz.</p>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2.5">
+        <button onclick="closeBudgetModal()" class="py-3 rounded-xl bg-slate-100 text-slate-700 font-semibold text-sm">Vazgeç</button>
+        <button onclick="saveCategoryBudget()" class="py-3 rounded-xl bg-slate-900 text-white font-semibold text-sm">Kaydet</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Kumbara Hedefi Düzenleme Modalı -->
+  <div id="goalModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden items-end sm:items-center justify-center p-4">
+    <div class="bg-white w-full max-w-md rounded-3xl p-5 shadow-2xl animate-[fadeIn_0.2s_ease-out]">
+      <div class="flex items-center justify-between mb-3">
+        <div class="flex items-center gap-2.5">
+          <span class="w-10 h-10 rounded-2xl flex items-center justify-center text-xl bg-emerald-100 text-emerald-700">🎯</span>
+          <div>
+            <h3 class="text-base font-bold text-slate-900">Birikim Hedefini Belirle</h3>
+            <p class="text-xs text-slate-500">Ne için para biriktiriyorsun?</p>
+          </div>
+        </div>
+        <button onclick="closeGoalModal()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center">✕</button>
+      </div>
+
+      <div class="space-y-3.5 my-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1">Hedef Adı</label>
+          <input 
+            type="text" 
+            id="goalTitleInput" 
+            placeholder="Örn: Acil Durum Fonu, Yaz Tatili" 
+            maxlength="40"
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          >
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1">Hedef Tutar (₺)</label>
+          <div class="relative">
+            <input 
+              type="text" 
+              inputmode="decimal" 
+              id="goalTargetInput" 
+              placeholder="10000" 
+              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-2xl font-extrabold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            >
+            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-lg">₺</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2.5">
+        <button onclick="closeGoalModal()" class="py-3 rounded-xl bg-slate-100 text-slate-700 font-semibold text-sm">Vazgeç</button>
+        <button onclick="saveSavingsGoal()" class="py-3 rounded-xl bg-emerald-600 text-white font-semibold text-sm">Hedefi Kaydet</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Safari Ana Ekrana Ekleme Rehberi Modalı -->
+  <div id="installModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden items-end sm:items-center justify-center p-4">
+    <div class="bg-white w-full max-w-md rounded-3xl p-5 shadow-2xl">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-base font-bold text-slate-900">iPhone Ana Ekrana Ekleme</h3>
+        <button onclick="closeInstallModal()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center">✕</button>
+      </div>
+      <p class="text-xs text-slate-600 leading-relaxed mb-4">
+        Bu uygulamayı App Store'dan indirmeden, tıpkı normal bir uygulama gibi tam ekran kullanmak için Safari'de şu adımları izleyin:
+      </p>
+      <ol class="space-y-3 text-xs text-slate-700 bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
+        <li class="flex items-start gap-2.5">
+          <span class="w-5 h-5 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold shrink-0">1</span>
+          <span>Safari ekranının en altındaki <strong>Paylaş</strong> simgesine (kare içinden yukarı ok) dokunun.</span>
+        </li>
+        <li class="flex items-start gap-2.5">
+          <span class="w-5 h-5 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold shrink-0">2</span>
+          <span>Açılan menüyü biraz yukarı kaydırıp <strong>"Ana Ekrana Ekle"</strong> seçeneğine dokunun.</span>
+        </li>
+        <li class="flex items-start gap-2.5">
+          <span class="w-5 h-5 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold shrink-0">3</span>
+          <span>Sağ üst köşedeki <strong>"Ekle"</strong> butonuna basın. Artık ana ekranınızdan tek dokunuşla açabilirsiniz!</span>
+        </li>
+      </ol>
+      <button onclick="closeInstallModal()" class="w-full mt-4 py-3 rounded-xl bg-slate-900 text-white font-semibold text-sm">Anladım</button>
+    </div>
+  </div>
+
+  <!-- Özel Bildirim Mesaj Kutusu (Toast) -->
+  <div id="toastBanner" class="fixed top-20 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg z-50 transition-all duration-300 opacity-0 pointer-events-none">
+    İşlem tamamlandı
+  </div>
+
+  <script>
+    // =========================================================================
+    // 1. SABİT VERİLER VE SEKTÖR TANIMLARI (İstenen 8 Sektör)
+    // =========================================================================
+    const CATEGORIES = [
+      { id: 'yemek', name: 'Yemek', icon: '🍽️', color: 'bg-orange-100 text-orange-700 border-orange-200', barColor: 'bg-orange-500' },
+      { id: 'ev_market', name: 'Ev Market', icon: '🛒', color: 'bg-emerald-100 text-emerald-700 border-emerald-200', barColor: 'bg-emerald-500' },
+      { id: 'disari_market', name: 'Dışarı Market', icon: '🛍️', color: 'bg-teal-100 text-teal-700 border-teal-200', barColor: 'bg-teal-500' },
+      { id: 'egitim', name: 'Eğitim', icon: '📚', color: 'bg-blue-100 text-blue-700 border-blue-200', barColor: 'bg-blue-500' },
+      { id: 'saglik', name: 'Sağlık', icon: '💊', color: 'bg-rose-100 text-rose-700 border-rose-200', barColor: 'bg-rose-500' },
+      { id: 'ulasim', name: 'Ulaşım', icon: '🚌', color: 'bg-indigo-100 text-indigo-700 border-indigo-200', barColor: 'bg-indigo-500' },
+      { id: 'eglence', name: 'Eğlence', icon: '🎬', color: 'bg-purple-100 text-purple-700 border-purple-200', barColor: 'bg-purple-500' },
+      { id: 'kafe', name: 'Kafe', icon: '☕', color: 'bg-amber-100 text-amber-800 border-amber-200', barColor: 'bg-amber-500' }
+    ];
+
+    const TR_MONTHS = [
+      'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
+      'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
+    ];
+
+    const TR_DAYS = [
+      'Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'
+    ];
+
+    const STORAGE_KEYS = {
+      EXPENSES: 'harcama_takip_expenses_v1',
+      BUDGETS: 'harcama_takip_budgets_v1',
+      SAVINGS_GOAL: 'harcama_takip_savings_goal_v1',
+      SAVINGS_LOGS: 'harcama_takip_savings_logs_v1'
+    };
+
+    // =========================================================================
+    // 2. UYGULAMA DURUMU (STATE)
+    // =========================================================================
+    let state = {
+      expenses: [],
+      budgets: {}, // { yemek: 5000, ev_market: 8000, ... }
+      savingsGoal: {
+        title: 'Acil Durum Fonu',
+        targetAmount: 10000
+      },
+      savingsLogs: [], // [{ id, date, amount, note, createdAt }]
+      selectedDateStr: getTodayISO(), // YYYY-MM-DD
+      selectedCategoryId: 'yemek',
+      historyYear: new Date().getFullYear(),
+      historyMonth: new Date().getMonth(), // 0-11
+      editingBudgetCategoryId: null
+    };
+
+    // =========================================================================
+    // 3. YARDIMCI TARİH VE PARA FORMAT FONKSİYONLARI
+    // =========================================================================
+    function initPWAManifest() {
+      try {
+        const iconHref = document.getElementById('appleTouchIcon').getAttribute('href');
+        const manifest = {
+          name: 'Harcama & Birikim Takip',
+          short_name: 'Harcamalarım',
+          start_url: '.',
+          display: 'standalone',
+          background_color: '#f8fafc',
+          theme_color: '#0f172a',
+          icons: [
+            {
+              src: iconHref,
+              sizes: '512x512',
+              type: 'image/svg+xml'
+            }
+          ]
+        };
+        const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+        const manifestURL = URL.createObjectURL(blob);
+        document.getElementById('webManifestLink').setAttribute('href', manifestURL);
+      } catch (e) {
+        console.warn('Manifest oluşturulamadı:', e);
+      }
+    }
+
+    function getTodayISO() {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      const d = String(now.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    function parseISODate(isoStr) {
+      const [y, m, d] = isoStr.split('-').map(Number);
+      return new Date(y, m - 1, d);
+    }
+
+    function formatTurkishFullDate(isoStr) {
+      const dateObj = parseISODate(isoStr);
+      const dayNum = dateObj.getDate();
+      const monthName = TR_MONTHS[dateObj.getMonth()];
+      const year = dateObj.getFullYear();
+      const dayName = TR_DAYS[dateObj.getDay()];
+      return `${dayNum} ${monthName} ${year}, ${dayName}`;
+    }
+
+    function formatCurrency(amount) {
+      return new Intl.NumberFormat('tr-TR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }).format(amount || 0) + ' ₺';
+    }
+
+    function formatCurrencyCompact(amount) {
+      return new Intl.NumberFormat('tr-TR', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+      }).format(amount || 0) + ' ₺';
+    }
+
+    function parseAmountInput(val) {
+      if (!val) return 0;
+      // Türkçe virgül veya nokta ayrımını temizle
+      let cleaned = String(val).trim().replace(/\s+/g, '');
+      // Eğer hem nokta hem virgül varsa (örn: 1.250,50)
+      if (cleaned.includes('.') && cleaned.includes(',')) {
+        cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+      } else {
+        cleaned = cleaned.replace(',', '.');
+      }
+      const num = parseFloat(cleaned);
+      return isNaN(num) ? 0 : Math.round(num * 100) / 100;
+    }
+
+    function showToast(message) {
+      const toast = document.getElementById('toastBanner');
+      toast.textContent = message;
+      toast.classList.remove('opacity-0');
+      toast.classList.add('opacity-100');
+      setTimeout(() => {
+        toast.classList.remove('opacity-100');
+        toast.classList.add('opacity-0');
+      }, 2400);
+    }
+
+    // =========================================================================
+    // 4. LOCALSTORAGE VERİ YÖNETİMİ (KALICILIK)
+    // =========================================================================
+    function loadDataFromStorage() {
+      try {
+        const savedExpenses = localStorage.getItem(STORAGE_KEYS.EXPENSES);
+        const savedBudgets = localStorage.getItem(STORAGE_KEYS.BUDGETS);
+        const savedGoal = localStorage.getItem(STORAGE_KEYS.SAVINGS_GOAL);
+        const savedLogs = localStorage.getItem(STORAGE_KEYS.SAVINGS_LOGS);
+
+        if (savedExpenses) {
+          state.expenses = JSON.parse(savedExpenses);
+        }
+        if (savedBudgets) {
+          state.budgets = JSON.parse(savedBudgets);
+        } else {
+          // Varsayılan boş bütçe yapısı
+          CATEGORIES.forEach(cat => {
+            state.budgets[cat.id] = 0;
+          });
+        }
+        if (savedGoal) {
+          state.savingsGoal = JSON.parse(savedGoal);
+        }
+        if (savedLogs) {
+          state.savingsLogs = JSON.parse(savedLogs);
+        }
+      } catch (err) {
+        console.error('Veri yükleme hatası:', err);
+        showToast('Veriler yüklenirken bir sorun oluştu.');
+      }
+    }
+
+    function saveDataToStorage() {
+      try {
+        localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(state.expenses));
+        localStorage.setItem(STORAGE_KEYS.BUDGETS, JSON.stringify(state.budgets));
+        localStorage.setItem(STORAGE_KEYS.SAVINGS_GOAL, JSON.stringify(state.savingsGoal));
+        localStorage.setItem(STORAGE_KEYS.SAVINGS_LOGS, JSON.stringify(state.savingsLogs));
+      } catch (err) {
+        console.error('Veri kaydetme hatası:', err);
+        showToast('Hafıza dolu, veri kaydedilemedi!');
+      }
+    }
+
+    // =========================================================================
+    // 5. HESAPLAMA MOTORU (AYLIK TOPLAM, GÜNLÜK ORTALAMA, BÜTÇE, YILLIK PROJEKSİYON)
+    // =========================================================================
+    function getMonthStats(year, monthIndex) {
+      const monthPrefix = `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
+      const monthExpenses = state.expenses.filter(exp => exp.date.startsWith(monthPrefix));
+
+      const totalSpent = monthExpenses.reduce((sum, item) => sum + item.amount, 0);
+
+      // Günlük ortalama hesabı:
+      // Eğer görüntülenen ay içinde bulunduğumuz aysa, ayın kaçıncı günündeysek ona bölünür.
+      // Geçmiş bir aysa o ayın toplam gün sayısına bölünür. Gelecek aysa 1'e bölünür.
+      const today = new Date();
+      const currentYear = today.getFullYear();
+      const currentMonth = today.getMonth();
+      const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+
+      let divisorDays = daysInMonth;
+      if (year === currentYear && monthIndex === currentMonth) {
+        divisorDays = Math.max(1, today.getDate());
+      } else if (year > currentYear || (year === currentYear && monthIndex > currentMonth)) {
+        divisorDays = 1;
+      }
+
+      const dailyAverage = totalSpent / divisorDays;
+
+      // Sektör bazlı harcamalar
+      const byCategory = {};
+      CATEGORIES.forEach(c => byCategory[c.id] = 0);
+      monthExpenses.forEach(exp => {
+        if (byCategory[exp.categoryId] !== undefined) {
+          byCategory[exp.categoryId] += exp.amount;
+        }
+      });
+
+      return {
+        monthExpenses,
+        totalSpent,
+        dailyAverage,
+        divisorDays,
+        byCategory
+      };
+    }
+
+    function calculateAnnualProjections(year, monthIndex) {
+      const stats = getMonthStats(year, monthIndex);
+      const divisorDays = Math.max(1, stats.divisorDays);
+
+      // Özellikle tekrarlayan günlük/haftalık tüketim kalemleri başta olmak üzere tüm sektörleri analiz et
+      const priorityIds = ['kafe', 'disari_market', 'yemek', 'eglence', 'ulasim'];
+      const projections = [];
+
+      CATEGORIES.forEach(cat => {
+        const catExpenses = stats.monthExpenses.filter(e => e.categoryId === cat.id);
+        const count = catExpenses.length;
+        const spent = stats.byCategory[cat.id] || 0;
+
+        // En az 2 kez tekrarlanmış veya öncelikli küçük harcama kaleminde harcama yapılmışsa yıllık projeksiyon çıkar
+        if (spent > 0 && (count >= 2 || (priorityIds.includes(cat.id) && spent >= 50))) {
+          const dailyPace = spent / divisorDays;
+          const annualEstimate = dailyPace * 365;
+          projections.push({
+            category: cat,
+            count,
+            spent,
+            annualEstimate,
+            isPriority: priorityIds.includes(cat.id)
+          });
+        }
+      });
+
+      // Önce tekrar sıklığı yüksek ve tutarı anlamlı olanları sırala (en fazla 3 kalem göster)
+      projections.sort((a, b) => {
+        if (b.count !== a.count) return b.count - a.count;
+        return b.annualEstimate - a.annualEstimate;
+      });
+
+      return projections.slice(0, 3);
+    }
+
+    function getTodayRemainingBudget() {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+      let totalMonthlyBudget = 0;
+      CATEGORIES.forEach(c => {
+        totalMonthlyBudget += Number(state.budgets[c.id] || 0);
+      });
+
+      if (totalMonthlyBudget <= 0) return 0;
+
+      const dailyAllowance = totalMonthlyBudget / daysInMonth;
+      const todayISO = getTodayISO();
+      const todaySpent = state.expenses
+        .filter(e => e.date === todayISO)
+        .reduce((sum, e) => sum + e.amount, 0);
+
+      const remaining = Math.floor(dailyAllowance - todaySpent);
+      return remaining > 0 ? remaining : 0;
+    }
+
+    // =========================================================================
+    // 6. ARAYÜZ RENDER FONKSİYONLARI
+    // =========================================================================
+    function renderCategorySelector() {
+      const grid = document.getElementById('categorySelectorGrid');
+      grid.innerHTML = CATEGORIES.map(cat => {
+        const isSelected = state.selectedCategoryId === cat.id;
+        return `
+          <button 
+            type="button" 
+            onclick="selectCategory('${cat.id}')"
+            class="flex flex-col items-center justify-center p-2 rounded-xl border transition min-h-[68px] ${
+              isSelected 
+                ? 'bg-slate-900 text-white border-slate-900 shadow-sm scale-[1.02]' 
+                : 'bg-slate-50 text-slate-700 border-slate-200/80 hover:bg-slate-100'
+            }"
+          >
+            <span class="text-xl mb-1">${cat.icon}</span>
+            <span class="text-[10px] font-semibold leading-tight text-center">${cat.name}</span>
+          </button>
+        `;
+      }).join('');
+    }
+
+    function renderTodayTab() {
+      const todayISO = getTodayISO();
+      const isToday = state.selectedDateStr === todayISO;
+
+      // Üst başlık ve seçili tarih metni
+      document.getElementById('headerSubtitle').textContent = formatTurkishFullDate(todayISO);
+      document.getElementById('selectedDateDisplay').textContent = formatTurkishFullDate(state.selectedDateStr);
+      document.getElementById('datePickerInput').value = state.selectedDateStr;
+
+      const goTodayBtn = document.getElementById('goToTodayBtn');
+      if (isToday) {
+        goTodayBtn.classList.add('hidden');
+      } else {
+        goTodayBtn.classList.remove('hidden');
+      }
+
+      // Seçili güne ait harcamalar
+      const dayExpenses = state.expenses
+        .filter(e => e.date === state.selectedDateStr)
+        .sort((a, b) => b.createdAt - a.createdAt);
+
+      const dayTotal = dayExpenses.reduce((sum, e) => sum + e.amount, 0);
+      document.getElementById('todayTotalAmount').textContent = formatCurrency(dayTotal);
+      document.getElementById('todayCountBadge').textContent = `${dayExpenses.length} işlem`;
+
+      // Seçili günün bulunduğu ayın istatistikleri
+      const selDateObj = parseISODate(state.selectedDateStr);
+      const monthStats = getMonthStats(selDateObj.getFullYear(), selDateObj.getMonth());
+      document.getElementById('monthTotalQuick').textContent = formatCurrency(monthStats.totalSpent);
+      document.getElementById('monthDailyAvgQuick').textContent = formatCurrency(monthStats.dailyAverage);
+
+      // Tekrarlayan Küçük Harcamaların Yıllık Maliyeti Kartı
+      renderAnnualProjectionCard(selDateObj.getFullYear(), selDateObj.getMonth());
+
+      // Günün harcama listesi
+      const listEl = document.getElementById('todayExpenseList');
+      if (dayExpenses.length === 0) {
+        listEl.innerHTML = `
+          <div class="text-center py-6 px-4 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+            <p class="text-xs font-medium text-slate-500">Bu tarihte henüz harcama kaydı yok.</p>
+            <p class="text-[11px] text-slate-400 mt-1">Yukarıdaki formdan hızlıca ekleyebilirsiniz.</p>
+          </div>
+        `;
+        return;
+      }
+
+      listEl.innerHTML = dayExpenses.map(item => {
+        const cat = CATEGORIES.find(c => c.id === item.categoryId) || CATEGORIES[0];
+        return `
+          <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100">
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="w-10 h-10 rounded-xl ${cat.color} border flex items-center justify-center text-lg shrink-0">
+                ${cat.icon}
+              </div>
+              <div class="min-w-0">
+                <p class="text-sm font-bold text-slate-800 truncate">${cat.name}</p>
+                ${item.note ? `<p class="text-xs text-slate-500 truncate">${escapeHTML(item.note)}</p>` : `<p class="text-[11px] text-slate-400">Harcama kaydı</p>`}
+              </div>
+            </div>
+            <div class="flex items-center gap-2.5 shrink-0 ml-2">
+              <span class="text-sm font-extrabold text-slate-900">${formatCurrency(item.amount)}</span>
+              <button 
+                onclick="deleteExpense('${item.id}')" 
+                class="w-8 h-8 rounded-lg bg-white border border-slate-200 text-rose-500 hover:bg-rose-50 flex items-center justify-center transition"
+                title="Harcamayı Sil"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderAnnualProjectionCard(year, monthIndex) {
+      const cardEl = document.getElementById('annualProjectionCard');
+      const listEl = document.getElementById('annualProjectionList');
+      const projections = calculateAnnualProjections(year, monthIndex);
+
+      if (projections.length === 0) {
+        cardEl.classList.add('hidden');
+        return;
+      }
+
+      cardEl.classList.remove('hidden');
+      listEl.innerHTML = projections.map(item => `
+        <div class="bg-white/90 rounded-xl p-2.5 border border-amber-200/70 flex items-center justify-between gap-2.5">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <span class="text-lg shrink-0">${item.category.icon}</span>
+            <p class="text-xs text-slate-700 leading-snug">
+              Bu tempoyla <strong class="text-slate-900">${item.category.name}</strong> kalemine yılda yaklaşık 
+              <strong class="text-amber-800 underline decoration-amber-400 decoration-2">${formatCurrencyCompact(item.annualEstimate)}</strong> harcayacaksın.
+            </p>
+          </div>
+          <span class="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full shrink-0">
+            ${item.count} işlem
+          </span>
+        </div>
+      `).join('');
+    }
+
+    function renderHistoryTab() {
+      const year = state.historyYear;
+      const month = state.historyMonth;
+      const stats = getMonthStats(year, month);
+
+      document.getElementById('historyMonthTitle').textContent = `${TR_MONTHS[month]} ${year}`;
+      document.getElementById('historyMonthTotal').textContent = formatCurrency(stats.totalSpent);
+      document.getElementById('historyDailyAverage').textContent = formatCurrency(stats.dailyAverage);
+      document.getElementById('historyAvgSubtext').textContent = `${stats.divisorDays} gün üzerinden hesaplandı`;
+
+      // Sektör bazlı aylık dağılım
+      const breakdownEl = document.getElementById('historyCategoryBreakdown');
+      const sortedCats = [...CATEGORIES]
+        .map(c => ({ ...c, spent: stats.byCategory[c.id] || 0 }))
+        .filter(c => c.spent > 0)
+        .sort((a, b) => b.spent - a.spent);
+
+      if (sortedCats.length === 0) {
+        breakdownEl.innerHTML = `<p class="text-xs text-slate-400">Bu ay henüz harcama bulunmuyor.</p>`;
+      } else {
+        breakdownEl.innerHTML = sortedCats.map(cat => {
+          const pct = stats.totalSpent > 0 ? Math.round((cat.spent / stats.totalSpent) * 100) : 0;
+          return `
+            <div class="flex items-center justify-between text-xs">
+              <div class="flex items-center gap-2">
+                <span>${cat.icon}</span>
+                <span class="font-semibold text-slate-700">${cat.name}</span>
+                <span class="text-slate-400">(%${pct})</span>
+              </div>
+              <span class="font-bold text-slate-900">${formatCurrency(cat.spent)}</span>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // Günlere göre gruplama
+      const groupedByDate = {};
+      stats.monthExpenses.forEach(exp => {
+        if (!groupedByDate[exp.date]) groupedByDate[exp.date] = [];
+        groupedByDate[exp.date].push(exp);
+      });
+
+      const sortedDates = Object.keys(groupedByDate).sort((a, b) => b.localeCompare(a));
+      document.getElementById('activeDaysCount').textContent = `${sortedDates.length} aktif gün`;
+
+      const daysContainer = document.getElementById('historyDaysContainer');
+      if (sortedDates.length === 0) {
+        daysContainer.innerHTML = `
+          <div class="bg-white rounded-2xl p-6 text-center border border-slate-100">
+            <p class="text-sm font-semibold text-slate-600">Bu ayda kayıtlı harcama yok</p>
+            <p class="text-xs text-slate-400 mt-1">Bugün sekmesinden harcama eklediğinizde gün bazında burada görünecektir.</p>
+          </div>
+        `;
+        return;
+      }
+
+      daysContainer.innerHTML = sortedDates.map(dateStr => {
+        const items = groupedByDate[dateStr];
+        const daySum = items.reduce((s, i) => s + i.amount, 0);
+        const dateLabel = formatTurkishFullDate(dateStr);
+
+        // O gün harcanan benzersiz sektör ikonları
+        const uniqueIcons = [...new Set(items.map(i => {
+          const c = CATEGORIES.find(cat => cat.id === i.categoryId);
+          return c ? c.icon : '💸';
+        }))].join(' ');
+
+        const itemsHtml = items.map(item => {
+          const c = CATEGORIES.find(cat => cat.id === item.categoryId) || CATEGORIES[0];
+          return `
+            <div class="flex items-center justify-between py-2 border-t border-slate-100 text-xs">
+              <div class="flex items-center gap-2 min-w-0">
+                <span>${c.icon}</span>
+                <span class="font-semibold text-slate-700">${c.name}</span>
+                ${item.note ? `<span class="text-slate-400 truncate">- ${escapeHTML(item.note)}</span>` : ''}
+              </div>
+              <div class="flex items-center gap-2 shrink-0">
+                <span class="font-bold text-slate-800">${formatCurrency(item.amount)}</span>
+                <button onclick="deleteExpense('${item.id}')" class="text-rose-400 hover:text-rose-600 p-1" title="Sil">✕</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        return `
+          <details class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 group" open>
+            <summary class="flex items-center justify-between cursor-pointer list-none">
+              <div>
+                <p class="text-xs font-bold text-slate-800">${dateLabel}</p>
+                <p class="text-xs text-slate-400 mt-0.5">${items.length} işlem • ${uniqueIcons}</p>
+              </div>
+              <div class="text-right">
+                <span class="text-sm font-extrabold text-slate-900 block">${formatCurrency(daySum)}</span>
+                <span class="text-[10px] text-emerald-600 font-medium">Detaylar</span>
+              </div>
+            </summary>
+            <div class="mt-3 pt-1">
+              ${itemsHtml}
+            </div>
+          </details>
+        `;
+      }).join('');
+    }
+
+    function renderBudgetTab() {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth();
+      const stats = getMonthStats(year, month);
+
+      document.getElementById('budgetMonthLabel').textContent = `${TR_MONTHS[month]} ${year} Bütçe Durumu`;
+
+      let totalBudget = 0;
+      let totalSpentInBudgeted = 0;
+
+      const listEl = document.getElementById('budgetListContainer');
+      listEl.innerHTML = CATEGORIES.map(cat => {
+        const budgetLimit = Number(state.budgets[cat.id] || 0);
+        const spent = stats.byCategory[cat.id] || 0;
+        const remaining = budgetLimit - spent;
+
+        totalBudget += budgetLimit;
+        totalSpentInBudgeted += spent;
+
+        let statusBadge = '';
+        let barWidth = 0;
+        let barColor = cat.barColor;
+        let remainingTextClass = 'text-emerald-600';
+
+        if (budgetLimit > 0) {
+          const ratio = (spent / budgetLimit) * 100;
+          barWidth = Math.min(100, Math.round(ratio));
+
+          if (remaining < 0) {
+            statusBadge = `<span class="text-[10px] font-bold bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full">Bütçe Aşıldı!</span>`;
+            barColor = 'bg-rose-500';
+            remainingTextClass = 'text-rose-600';
+          } else if (ratio >= 80) {
+            statusBadge = `<span class="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">Limite Yakın (%${Math.round(ratio)})</span>`;
+            barColor = 'bg-amber-500';
+            remainingTextClass = 'text-amber-600';
+          } else {
+            statusBadge = `<span class="text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">%${Math.round(ratio)} Kullanıldı</span>`;
+          }
+        } else {
+          statusBadge = `<span class="text-[10px] font-medium bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">Bütçe Belirlenmedi</span>`;
+        }
+
+        return `
+          <div onclick="openBudgetModal('${cat.id}')" class="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 active:bg-slate-100 transition cursor-pointer">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2.5">
+                <span class="w-9 h-9 rounded-xl ${cat.color} border flex items-center justify-center text-base">${cat.icon}</span>
+                <div>
+                  <h4 class="text-sm font-bold text-slate-800">${cat.name}</h4>
+                  ${statusBadge}
+                </div>
+              </div>
+              <div class="text-right">
+                <span class="text-[11px] text-slate-400 block">Aylık Bütçe</span>
+                <span class="text-sm font-extrabold text-slate-900 underline decoration-slate-300 decoration-dashed underline-offset-4">
+                  ${budgetLimit > 0 ? formatCurrencyCompact(budgetLimit) : 'Belirle +'}
+                </span>
+              </div>
+            </div>
+
+            ${budgetLimit > 0 ? `
+              <!-- İlerleme Çubuğu -->
+              <div class="w-full h-2 bg-slate-200 rounded-full overflow-hidden my-2">
+                <div class="h-full ${barColor} rounded-full transition-all duration-300" style="width: ${barWidth}%"></div>
+              </div>
+              <div class="flex items-center justify-between text-xs mt-1.5">
+                <span class="text-slate-500">Harcanan: <strong class="text-slate-800">${formatCurrency(spent)}</strong></span>
+                <span class="font-bold ${remainingTextClass}">
+                  ${remaining >= 0 ? `Kalan: ${formatCurrency(remaining)}` : `Aşım: ${formatCurrency(Math.abs(remaining))}`}
+                </span>
+              </div>
+            ` : `
+              <div class="flex items-center justify-between text-xs mt-2 pt-2 border-t border-slate-200/60">
+                <span class="text-slate-500">Bu ay harcanan: <strong class="text-slate-800">${formatCurrency(spent)}</strong></span>
+                <span class="text-emerald-600 font-semibold">Limit ekle →</span>
+              </div>
+            `}
+          </div>
+        `;
+      }).join('');
+
+      // Üst Özet Kartını Güncelle
+      const totalRemaining = totalBudget - totalSpentInBudgeted;
+      const overallPct = totalBudget > 0 ? Math.round((totalSpentInBudgeted / totalBudget) * 100) : 0;
+
+      document.getElementById('summaryTotalBudget').textContent = formatCurrencyCompact(totalBudget);
+      document.getElementById('summaryTotalSpent').textContent = formatCurrencyCompact(totalSpentInBudgeted);
+      document.getElementById('summaryTotalRemaining').textContent = totalBudget > 0 ? formatCurrencyCompact(totalRemaining) : '-';
+      document.getElementById('totalBudgetPercentBadge').textContent = totalBudget > 0 ? `%${overallPct} Kullanıldı` : 'Bütçe Girilmedi';
+    }
+
+    function renderSavingsTab() {
+      const goalTitle = state.savingsGoal.title || 'Birikim Hedefim';
+      const targetAmount = Math.max(1, Number(state.savingsGoal.targetAmount || 10000));
+      const totalSaved = state.savingsLogs.reduce((sum, item) => sum + item.amount, 0);
+      const remaining = Math.max(0, targetAmount - totalSaved);
+      const pct = Math.min(100, Math.round((totalSaved / targetAmount) * 100));
+
+      document.getElementById('savingsGoalTitleDisplay').textContent = goalTitle;
+      document.getElementById('savingsCurrentTotal').textContent = formatCurrency(totalSaved);
+      document.getElementById('savingsTargetDisplay').textContent = formatCurrency(targetAmount);
+      document.getElementById('savingsRemainingDisplay').textContent = remaining === 0 ? 'Hedefe Ulaşıldı! 🎉' : formatCurrency(remaining);
+      document.getElementById('savingsPercentBadge').textContent = `%${pct}`;
+      document.getElementById('savingsProgressBar').style.width = `${pct}%`;
+
+      // Bugünkü kalan bütçe kısayol etiketi
+      const dailyRem = getTodayRemainingBudget();
+      document.getElementById('dailyRemainingQuickLabel').textContent = dailyRem > 0 ? `+${formatCurrencyCompact(dailyRem)}` : 'Limit Yok';
+
+      // Birikim geçmişi listesi
+      const sortedLogs = [...state.savingsLogs].sort((a, b) => b.createdAt - a.createdAt);
+      document.getElementById('savingsCountBadge').textContent = `${sortedLogs.length} işlem`;
+
+      const listEl = document.getElementById('savingsHistoryList');
+      if (sortedLogs.length === 0) {
+        listEl.innerHTML = `
+          <div class="text-center py-6 px-4 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+            <p class="text-xs font-medium text-slate-500">Kumbarada henüz birikim kaydı yok.</p>
+            <p class="text-[11px] text-slate-400 mt-1">Alışverişten vazgeçtiğin tutarları yukarıdan hemen aktarabilirsin.</p>
+          </div>
+        `;
+        return;
+      }
+
+      listEl.innerHTML = sortedLogs.map(log => `
+        <div class="flex items-center justify-between p-3 rounded-xl bg-emerald-50/50 border border-emerald-100">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-base shrink-0">
+              💰
+            </div>
+            <div class="min-w-0">
+              <p class="text-xs font-bold text-slate-800 truncate">${escapeHTML(log.note || 'Kumbara birikimi')}</p>
+              <p class="text-[11px] text-slate-400 mt-0.5">${formatTurkishFullDate(log.date)}</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 shrink-0 ml-2">
+            <span class="text-sm font-extrabold text-emerald-700">+${formatCurrency(log.amount)}</span>
+            <button 
+              onclick="deleteSavingsLog('${log.id}')" 
+              class="w-8 h-8 rounded-lg bg-white border border-slate-200 text-rose-500 hover:bg-rose-50 flex items-center justify-center transition"
+              title="Kaydı Sil"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderAll() {
+      renderCategorySelector();
+      renderTodayTab();
+      renderHistoryTab();
+      renderBudgetTab();
+      renderSavingsTab();
+    }
+
+    // =========================================================================
+    // 7. KULLANICI ETKİLEŞİMLERİ VE EVENT HANDLER'LAR
+    // =========================================================================
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-view').forEach(el => el.classList.remove('active'));
+      document.getElementById(`view-${tabName}`).classList.add('active');
+
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.remove('text-slate-900', 'font-bold');
+        btn.classList.add('text-slate-400', 'font-medium');
+      });
+      const activeBtn = document.getElementById(`nav-${tabName}`);
+      activeBtn.classList.remove('text-slate-400', 'font-medium');
+      activeBtn.classList.add('text-slate-900', 'font-bold');
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      renderAll();
+    }
+
+    function selectCategory(catId) {
+      state.selectedCategoryId = catId;
+      renderCategorySelector();
+    }
+
+    function changeSelectedDate(deltaDays) {
+      const current = parseISODate(state.selectedDateStr);
+      current.setDate(current.getDate() + deltaDays);
+      const y = current.getFullYear();
+      const m = String(current.getMonth() + 1).padStart(2, '0');
+      const d = String(current.getDate()).padStart(2, '0');
+      state.selectedDateStr = `${y}-${m}-${d}`;
+      renderTodayTab();
+    }
+
+    function triggerDatePicker() {
+      const picker = document.getElementById('datePickerInput');
+      if (picker.showPicker) {
+        picker.showPicker();
+      } else {
+        picker.click();
+      }
+    }
+
+    function onDateInputChange(val) {
+      if (val) {
+        state.selectedDateStr = val;
+        renderTodayTab();
+      }
+    }
+
+    function resetToToday() {
+      state.selectedDateStr = getTodayISO();
+      renderTodayTab();
+    }
+
+    function handleAddExpense(e) {
+      e.preventDefault();
+      const amountEl = document.getElementById('amountInput');
+      const noteEl = document.getElementById('noteInput');
+
+      const amount = parseAmountInput(amountEl.value);
+      if (amount <= 0) {
+        showToast('Lütfen geçerli bir tutar girin.');
+        amountEl.focus();
+        return;
+      }
+
+      const newExpense = {
+        id: 'exp_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+        date: state.selectedDateStr,
+        categoryId: state.selectedCategoryId,
+        amount: amount,
+        note: noteEl.value.trim(),
+        createdAt: Date.now()
+      };
+
+      state.expenses.push(newExpense);
+      saveDataToStorage();
+
+      // Formu temizle
+      amountEl.value = '';
+      noteEl.value = '';
+      amountEl.blur();
+
+      // Geçmiş sekmesindeki ayı da eklenen tarihin ayına eşitle
+      const addedDate = parseISODate(state.selectedDateStr);
+      state.historyYear = addedDate.getFullYear();
+      state.historyMonth = addedDate.getMonth();
+
+      renderAll();
+      showToast('Harcama kaydedildi ✓');
+    }
+
+    function deleteExpense(id) {
+      state.expenses = state.expenses.filter(item => item.id !== id);
+      saveDataToStorage();
+      renderAll();
+      showToast('Harcama silindi');
+    }
+
+    function changeHistoryMonth(delta) {
+      let newMonth = state.historyMonth + delta;
+      let newYear = state.historyYear;
+      if (newMonth < 0) {
+        newMonth = 11;
+        newYear--;
+      } else if (newMonth > 11) {
+        newMonth = 0;
+        newYear++;
+      }
+      state.historyMonth = newMonth;
+      state.historyYear = newYear;
+      renderHistoryTab();
+    }
+
+    // Bütçe Modal İşlemleri
+    function openBudgetModal(catId) {
+      const cat = CATEGORIES.find(c => c.id === catId);
+      if (!cat) return;
+
+      state.editingBudgetCategoryId = catId;
+      document.getElementById('modalCatIcon').textContent = cat.icon;
+      document.getElementById('modalCatName').textContent = `${cat.name} Aylık Bütçesi`;
+      
+      const currentVal = state.budgets[catId] || 0;
+      const input = document.getElementById('modalBudgetInput');
+      input.value = currentVal > 0 ? currentVal : '';
+
+      const modal = document.getElementById('budgetModal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      setTimeout(() => input.focus(), 100);
+    }
+
+    function closeBudgetModal() {
+      const modal = document.getElementById('budgetModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      state.editingBudgetCategoryId = null;
+    }
+
+    function saveCategoryBudget() {
+      if (!state.editingBudgetCategoryId) return;
+      const val = parseAmountInput(document.getElementById('modalBudgetInput').value);
+      state.budgets[state.editingBudgetCategoryId] = Math.max(0, val);
+      saveDataToStorage();
+      closeBudgetModal();
+      renderBudgetTab();
+      renderSavingsTab();
+      showToast('Bütçe güncellendi ✓');
+    }
+
+    // Kumbara & Birikim Hedefi İşlemleri
+    function openGoalModal() {
+      document.getElementById('goalTitleInput').value = state.savingsGoal.title || '';
+      document.getElementById('goalTargetInput').value = state.savingsGoal.targetAmount || '';
+      const modal = document.getElementById('goalModal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      setTimeout(() => document.getElementById('goalTitleInput').focus(), 100);
+    }
+
+    function closeGoalModal() {
+      const modal = document.getElementById('goalModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function saveSavingsGoal() {
+      const titleVal = document.getElementById('goalTitleInput').value.trim() || 'Birikim Hedefim';
+      const targetVal = parseAmountInput(document.getElementById('goalTargetInput').value);
+      if (targetVal <= 0) {
+        showToast('Lütfen geçerli bir hedef tutarı girin.');
+        return;
+      }
+      state.savingsGoal = {
+        title: titleVal,
+        targetAmount: targetVal
+      };
+      saveDataToStorage();
+      closeGoalModal();
+      renderSavingsTab();
+      showToast('Birikim hedefi güncellendi ✓');
+    }
+
+    function addSavingsEntry(amount, note) {
+      const entry = {
+        id: 'sav_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+        date: getTodayISO(),
+        amount: amount,
+        note: note || 'Kumbara birikimi',
+        createdAt: Date.now()
+      };
+      state.savingsLogs.push(entry);
+      saveDataToStorage();
+      renderSavingsTab();
+      showToast(`+${formatCurrencyCompact(amount)} kumbaraya atıldı 🐷`);
+    }
+
+    function handleAddSavings(e) {
+      e.preventDefault();
+      const amountEl = document.getElementById('savingsAmountInput');
+      const noteEl = document.getElementById('savingsNoteInput');
+
+      const amount = parseAmountInput(amountEl.value);
+      if (amount <= 0) {
+        showToast('Lütfen geçerli bir tutar girin.');
+        amountEl.focus();
+        return;
+      }
+
+      addSavingsEntry(amount, noteEl.value.trim() || 'Manuel birikim');
+      amountEl.value = '';
+      noteEl.value = '';
+      amountEl.blur();
+    }
+
+    function quickAddSavings(amount, defaultNote) {
+      addSavingsEntry(amount, defaultNote);
+    }
+
+    function transferDailyRemainingToSavings() {
+      const rem = getTodayRemainingBudget();
+      if (rem <= 0) {
+        showToast('Aktarılacak kalan günlük bütçe bulunmuyor (Önce Bütçe sekmesinden limit belirleyin).');
+        return;
+      }
+      addSavingsEntry(rem, 'Bugünkü kalan bütçe aktarımı');
+    }
+
+    function deleteSavingsLog(id) {
+      state.savingsLogs = state.savingsLogs.filter(item => item.id !== id);
+      saveDataToStorage();
+      renderSavingsTab();
+      showToast('Birikim kaydı silindi');
+    }
+
+    // Ana Ekrana Ekleme Rehber Modalı
+    function openInstallModal() {
+      const modal = document.getElementById('installModal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeInstallModal() {
+      const modal = document.getElementById('installModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    // Yedekleme & Geri Yükleme
+    function exportBackupData() {
+      const backupObj = {
+        app: 'HarcamaTakip',
+        exportedAt: new Date().toISOString(),
+        expenses: state.expenses,
+        budgets: state.budgets,
+        savingsGoal: state.savingsGoal,
+        savingsLogs: state.savingsLogs
+      };
+      const jsonStr = JSON.stringify(backupObj, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `harcama-yedek-${getTodayISO()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('Yedek dosyası indirildi');
+    }
+
+    function importBackupData(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          if (Array.isArray(parsed.expenses) && typeof parsed.budgets === 'object') {
+            state.expenses = parsed.expenses;
+            state.budgets = parsed.budgets;
+            if (parsed.savingsGoal) state.savingsGoal = parsed.savingsGoal;
+            if (Array.isArray(parsed.savingsLogs)) state.savingsLogs = parsed.savingsLogs;
+            saveDataToStorage();
+            renderAll();
+            showToast('Yedek başarıyla geri yüklendi ✓');
+          } else {
+            showToast('Geçersiz yedek dosyası formatı');
+          }
+        } catch (err) {
+          showToast('Dosya okunamadı');
+        }
+      };
+      reader.readAsText(file);
+      event.target.value = '';
+    }
+
+    function escapeHTML(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    // =========================================================================
+    // 8. BAŞLANGIÇ ÇALIŞTIRMA
+    // =========================================================================
+    window.addEventListener('DOMContentLoaded', () => {
+      initPWAManifest();
+      loadDataFromStorage();
+      renderAll();
+    });
+  </script>
+</body>
+</html>
